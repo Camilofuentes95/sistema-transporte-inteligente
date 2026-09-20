@@ -1,249 +1,152 @@
-"""
-SISTEMA INTELIGENTE DE RUTAS DE TRANSPORTE MASIVO
-Basado en:
-- Cap. 2: Lógica y Representación del Conocimiento (Hechos y Relaciones)
-- Cap. 3: Sistemas Basados en Reglas (Reglas Si-Entonces / Inferencia)
-- Cap. 9: Búsquedas Heurísticas (Algoritmo A* / f(n) = g(n) + h(n))
-"""
-
 import math
 import heapq
 
 # =====================================================================
-# 1. BASE DE CONOCIMIENTO (Capítulo 2: Lógica y Representación)
+# PARTE 1: BASE DE CONOCIMIENTO (Cap. 2 - Lógica y Hechos)
 # =====================================================================
-# Representamos el conocimiento mediante "Hechos" estructurados:
-# a) Coordenadas espaciales de cada estación (X, Y en km para calcular la heurística).
+# Coordenadas espaciales (X, Y en km) de cada estación
 ESTACIONES = {
-    "Portal Norte": (10, 20),
-    "Calle 100":    (10, 15),
-    "Calle 72":     (10, 10),
-    "Calle 26":     (10, 5),
+    "Portal Norte":     (10, 20),
+    "Calle 100":        (10, 15),
+    "Calle 72":         (10, 10),
+    "Calle 26":         (10, 5),
     "Estacion Central": (10, 0),
-    "Portal Sur":   (10, -10),
-    "Suba":         (4, 18),
-    "Polo":         (7, 12),
-    "Universidad":  (5, 4),
-    "Terminal":     (2, -2)
-    # --- KRISTINA ---
+    "Portal Sur":       (10, -10),
+    "Suba":             (4, 18),
+    "Polo":             (7, 12),
+    "Universidad":      (5, 4),
+    "Terminal":         (2, -2)
+    # --- KRISTINA: Nuevas estaciones ---
 }
 
-# b) Conexiones del sistema: (Origen, Destino, Tiempo_minutos, Linea)
-# Equivalente lógico a: Conectado(A, B) ^ Costo(A, B, T) ^ Linea(A, B, L)
+# Conexiones: (Origen, Destino, Tiempo_minutos, Linea)
 CONEXIONES = [
-    # Línea A (Troncal Principal - Azul)
+    # Línea A (Troncal Principal)
     ("Portal Norte", "Calle 100", 6, "Linea A"),
     ("Calle 100", "Calle 72", 5, "Linea A"),
     ("Calle 72", "Calle 26", 6, "Linea A"),
     ("Calle 26", "Estacion Central", 5, "Linea A"),
     ("Estacion Central", "Portal Sur", 12, "Linea A"),
 
-    # Línea B (Línea Occidental - Verde)
+    # Línea B (Línea Occidental)
     ("Suba", "Polo", 8, "Linea B"),
     ("Polo", "Calle 72", 4, "Linea B"),
     ("Calle 72", "Universidad", 7, "Linea B"),
     ("Universidad", "Terminal", 9, "Linea B"),
 
-    # Línea C (Conexión Transversal - Naranja)
+    # Línea C (Conexión Transversal)
     ("Portal Norte", "Suba", 7, "Linea C"),
     ("Universidad", "Calle 26", 5, "Linea C"),
     ("Terminal", "Portal Sur", 8, "Linea C"),
-    # --- KRISTINA ---
+    # --- KRISTINA: Nuevas conexiones ---
 ]
 
 
 # =====================================================================
-# 2. SISTEMA BASADO EN REGLAS (Capítulo 3: Reglas de Inferencia)
+# PARTE 2: SISTEMA BASADO EN REGLAS (Cap. 3 - Inferencia Lógica)
 # =====================================================================
 class MotorDeReglas:
-    """
-    Aplica reglas lógicas de tipo SI <Condición> ENTONCES <Acción/Costo>
-    para inferir los movimientos válidos y sus costos.
-    """
-    #--MIGUEL--
-    PENALIZACION_TRANSBORDO = 4  # 4 minutos por cambiar de línea
+    PENALIZACION_TRANSBORDO = 4  # Regla: +4 min si cambia de línea
+    # --- MIGUEL: Reglas de Tarifa ---
 
     @staticmethod
-    def obtener_conexiones_validas(estacion_actual, linea_actual, visitados):
-        """
-        Regla 1 (Adyacencia Bidireccional):
-        SI existe conexion(A, B) O conexion(B, A)
-        Y B NO está en visitados (Regla Anti-Ciclos)
-        ENTONCES B es un sucesor válido.
-        """
+    def obtener_conexiones_validas(actual, linea_actual, visitados):
         sucesores = []
-
-        for origen, destino, tiempo, linea in CONEXIONES:
-            siguiente = None
-            if origen == estacion_actual:
-                siguiente = destino
-            elif destino == estacion_actual:
-                siguiente = origen
-
-            # Aplicar Regla Lógica: Solo avanzar si no es un ciclo
-            if siguiente and siguiente not in visitados:
-                # Regla 2 (Costo y Transbordos):
-                # SI hay cambio de línea ENTONCES agregar penalización de tiempo
-                costo_adicional = 0
-                es_transbordo = False
-                if linea_actual is not None and linea_actual != linea:
-                    costo_adicional = MotorDeReglas.PENALIZACION_TRANSBORDO
-                    es_transbordo = True
-
-                costo_total_tramo = tiempo + costo_adicional
-                sucesores.append({
-                    "estacion": siguiente,
-                    "costo": costo_total_tramo,
-                    "linea": linea,
-                    "transbordo": es_transbordo
-                })
-
+        for orig, dest, tiempo, linea in CONEXIONES:
+            # Regla 1: Adyacencia bidireccional
+            vecino = dest if orig == actual else (orig if dest == actual else None)
+            
+            # Regla 2: Anti-ciclos (no repetir estaciones del camino)
+            if vecino and vecino not in visitados:
+                # Regla 3: Penalización si hay transbordo entre líneas
+                transbordo = (linea_actual is not None and linea_actual != linea)
+                costo_paso = tiempo + (MotorDeReglas.PENALIZACION_TRANSBORDO if transbordo else 0)
+                
+                sucesores.append((vecino, linea, costo_paso))
         return sucesores
 
 
 # =====================================================================
-# 3. BÚSQUEDA HEURÍSTICA A* (Capítulo 9: Algoritmos de Búsqueda)
+# PARTE 3: BÚSQUEDA HEURÍSTICA A* (Cap. 9 - Optimización)
 # =====================================================================
-def heuristica_distancia(estacion_a, estacion_b):
-    """
-    Función Heurística h(n):
-    Estima el tiempo restante en línea recta (Distancia Euclidiana)
-    Asumiendo una velocidad promedio de 1 km por minuto.
-    Es admisible porque nunca sobreestima el costo real.
-    """
-    x1, y1 = ESTACIONES[estacion_a]
-    x2, y2 = ESTACIONES[estacion_b]
-    distancia_km = math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
-    tiempo_estimado_minutos = distancia_km * 1.0  # h(n)
-    return tiempo_estimado_minutos
+def heuristica(est_a, est_b):
+    """Calcula distancia en línea recta (Euclidiana) como heurística h(n)"""
+    x1, y1 = ESTACIONES[est_a]
+    x2, y2 = ESTACIONES[est_b]
+    return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
 
 
 def buscar_mejor_ruta(inicio, destino):
-    """
-    Algoritmo A* (A-Estrella):
-    f(n) = g(n) + h(n)
-    - g(n): Costo acumulado real desde el inicio hasta el nodo n.
-    - h(n): Estimación heurística desde el nodo n hasta el destino.
-    """
-    if inicio not in ESTACIONES or destino not in ESTACIONES:
-        return None, "Una o ambas estaciones no existen en la base de conocimiento."
+    """Algoritmo A*: f(n) = g(n) + h(n)"""
+    # Cola de prioridad: (f, g, estacion, linea_actual, camino)
+    cola = [(heuristica(inicio, destino), 0, inicio, None, [(inicio, None, 0)])]
+    mejor_g = {inicio: 0}
 
-    # Cola de prioridad: almacena tuplas (f_n, g_n, estacion_actual, linea_actual, camino)
-    cola_prioridad = []
-    
-    # Estado inicial
-    h_inicio = heuristica_distancia(inicio, destino)
-    # (f(n), g(n), estacion, linea, camino_recorrido)
-    heapq.heappush(cola_prioridad, (h_inicio, 0, inicio, None, [(inicio, None, 0)]))
-    
-    # Registro de mejores costos conocidos g(n) para cada estación
-    mejor_costo_g = {inicio: 0}
+    while cola:
+        f, g, actual, linea_actual, camino = heapq.heappop(cola)
 
-    while cola_prioridad:
-        f_actual, g_actual, actual, linea_actual, camino = heapq.heappop(cola_prioridad)
-
-        # SI alcanzamos el destino -> Meta lograda (Camino Óptimo Encontrado)
         if actual == destino:
-            return camino, g_actual
+            return camino, g
 
-        # Extraer estaciones ya visitadas en este camino para no ciclar
-        visitados_en_camino = {est for est, _, _ in camino}
+        visitados = {est for est, _, _ in camino}
+        for vecino, nueva_linea, costo in MotorDeReglas.obtener_conexiones_validas(actual, linea_actual, visitados):
+            nuevo_g = g + costo
+            if vecino not in mejor_g or nuevo_g < mejor_g[vecino]:
+                mejor_g[vecino] = nuevo_g
+                nuevo_f = nuevo_g + heuristica(vecino, destino)
+                heapq.heappush(cola, (nuevo_f, nuevo_g, vecino, nueva_linea, camino + [(vecino, nueva_linea, costo)]))
 
-        # Consultar al Motor de Reglas lógicas para obtener siguientes pasos
-        sucesores = MotorDeReglas.obtener_conexiones_validas(actual, linea_actual, visitados_en_camino)
-
-        for suc in sucesores:
-            vecino = suc["estacion"]
-            costo_paso = suc["costo"]
-            nueva_linea = suc["linea"]
-
-            nuevo_g = g_actual + costo_paso
-            
-            # Si encontramos un camino más corto hacia 'vecino'
-            if vecino not in mejor_costo_g or nuevo_g < mejor_costo_g[vecino]:
-                mejor_costo_g[vecino] = nuevo_g
-                h_vecino = heuristica_distancia(vecino, destino)
-                nuevo_f = nuevo_g + h_vecino
-                
-                nuevo_camino = camino + [(vecino, nueva_linea, costo_paso)]
-                heapq.heappush(cola_prioridad, (nuevo_f, nuevo_g, vecino, nueva_linea, nuevo_camino))
-
-    return None, "No se encontró ruta disponible entre los puntos seleccionados."
+    return None, "No se encontro ruta disponible."
 
 
 # =====================================================================
-# 4. INTERFAZ INTERACTIVA Y VISUALIZACIÓN DE RESULTADOS
+# INTERFAZ INTERACTIVA
 # =====================================================================
 def imprimir_ruta(origen, destino):
-    print("\n" + "="*55)
-    print(f" BUSCANDO LA MEJOR RUTA: [{origen}] --> [{destino}]")
-    print("="*55)
-    
+    print("\n" + "="*50)
+    print(f" RUTA OPTIMA: [{origen}] --> [{destino}]")
+    print("="*50)
     camino, costo_total = buscar_mejor_ruta(origen, destino)
 
     if camino is None:
         print(f" [!] Error: {costo_total}")
-        #-- MIGUEL
         return
 
     print(f" Tiempo Total Estimado: {costo_total:.1f} minutos\n")
+    # --- MIGUEL: Mostrar Tarifa ---
     print(" Itinerario paso a paso:")
-    
     for i, (estacion, linea, costo) in enumerate(camino):
         if i == 0:
-            print(f"  [Paso 1] Partir desde: {estacion}")
+            print(f"  [1] Salir desde: {estacion}")
         else:
-            print(f"  [Paso {i+1}] Tomar {linea} hacia -> {estacion} (+{costo} min)")
-    print("="*55 + "\n")
+            print(f"  [{i+1}] Tomar {linea} hacia -> {estacion} (+{costo} min)")
+    print("="*50 + "\n")
 
 
 def menu_interactivo():
-    lista_estaciones = list(ESTACIONES.keys())
-    
+    estaciones = list(ESTACIONES.keys())
     while True:
-        print("\n" + "="*50)
-        print("   SISTEMA INTELIGENTE DE TRANSPORTE MASIVO")
-        print("="*50)
-        print("Estaciones disponibles:")
-        for idx, est in enumerate(lista_estaciones, start=1):
+        print("\n" + "="*45)
+        print("  SISTEMA INTELIGENTE DE TRANSPORTE MASIVO")
+        print("="*45)
+        for idx, est in enumerate(estaciones, start=1):
             print(f"  [{idx}] {est}")
         print("  [0] Salir")
-        print("="*50)
+        print("="*45)
 
-        # 1. Seleccionar salida
         try:
-            opc_origen = int(input("\n Selecciona el numero de la estacion de SALIDA: "))
-            if opc_origen == 0:
-                print("Buen viaje!")
-                break
-            if not (1 <= opc_origen <= len(lista_estaciones)):
-                print(" [!] Opcion invalida. Intenta nuevamente.")
-                continue
-            origen = lista_estaciones[opc_origen - 1]
+            opc_orig = int(input("\n Selecciona numero de SALIDA: "))
+            if opc_orig == 0: break
+            opc_dest = int(input(" Selecciona numero de LLEGADA: "))
+            if opc_dest == 0: break
 
-            # 2. Seleccionar llegada
-            opc_destino = int(input(" Selecciona el numero de la estacion de LLEGADA: "))
-            if opc_destino == 0:
-                print("Buen viaje!")
-                break
-            if not (1 <= opc_destino <= len(lista_estaciones)):
-                print(" [!] Opcion invalida. Intenta nuevamente.")
-                continue
-            destino = lista_estaciones[opc_destino - 1]
-
-            if origen == destino:
-                print(" [!] La estacion de salida y llegada son la misma.")
-                continue
-
-            # Calcular y mostrar la ruta óptima
-            imprimir_ruta(origen, destino)
-
+            if 1 <= opc_orig <= len(estaciones) and 1 <= opc_dest <= len(estaciones):
+                imprimir_ruta(estaciones[opc_orig-1], estaciones[opc_dest-1])
+            else:
+                print(" [!] Opcion fuera de rango.")
         except (ValueError, EOFError):
-            print(" [!] Entrada invalida.")
             break
 
 
 if __name__ == "__main__":
     menu_interactivo()
-
-
