@@ -25,6 +25,7 @@ ESTACIONES = {
     "Polo":         (7, 12),
     "Universidad":  (5, 4),
     "Terminal":     (2, -2)
+    # --- KRISTINA ---
 }
 
 # b) Conexiones del sistema: (Origen, Destino, Tiempo_minutos, Linea)
@@ -47,6 +48,7 @@ CONEXIONES = [
     ("Portal Norte", "Suba", 7, "Linea C"),
     ("Universidad", "Calle 26", 5, "Linea C"),
     ("Terminal", "Portal Sur", 8, "Linea C"),
+    # --- KRISTINA ---
 ]
 
 
@@ -58,6 +60,7 @@ class MotorDeReglas:
     Aplica reglas lógicas de tipo SI <Condición> ENTONCES <Acción/Costo>
     para inferir los movimientos válidos y sus costos.
     """
+    #--MIGUEL--
     PENALIZACION_TRANSBORDO = 4  # 4 minutos por cambiar de línea
 
     @staticmethod
@@ -180,6 +183,7 @@ def imprimir_ruta(origen, destino):
 
     if camino is None:
         print(f" [!] Error: {costo_total}")
+        #-- MIGUEL
         return
 
     print(f" Tiempo Total Estimado: {costo_total:.1f} minutos\n")
