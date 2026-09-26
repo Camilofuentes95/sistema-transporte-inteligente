@@ -49,6 +49,15 @@ class MotorDeReglas:
     PENALIZACION_TRANSBORDO = 4  # Regla: +4 min si cambia de línea
     # --- MIGUEL: Reglas de Tarifa ---
 
+     TARIFA_BASE = 2950
+    TARIFA_TRANSBORDO = 200
+    @staticmethod
+    def calcular_tarifa(camino):
+        """Regla: Tarifa base + $200 por cada transbordo entre líneas"""
+        transbordos = sum(1 for i in range(2, len(camino)) if camino[i][1] != camino[i-1][1])
+        costo = MotorDeReglas.TARIFA_BASE + (transbordos * MotorDeReglas.TARIFA_TRANSBORDO)
+        return costo, transbordos
+
     @staticmethod
     def obtener_conexiones_validas(actual, linea_actual, visitados):
         sucesores = []
@@ -114,6 +123,9 @@ def imprimir_ruta(origen, destino):
 
     print(f" Tiempo Total Estimado: {costo_total:.1f} minutos\n")
     # --- MIGUEL: Mostrar Tarifa ---
+
+    tarifa, transbordos = MotorDeReglas.calcular_tarifa(camino)
+    print(f" Costo del Pasaje: ${tarifa:,} COP ({transbordos} transbordos)")
     print(" Itinerario paso a paso:")
     for i, (estacion, linea, costo) in enumerate(camino):
         if i == 0:
