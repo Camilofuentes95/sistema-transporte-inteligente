@@ -17,6 +17,10 @@ ESTACIONES = {
     "Universidad":      (5, 4),
     "Terminal":         (2, -2)
     # --- KRISTINA: Nuevas estaciones ---
+    "Aeropuerto":       (-2, 8),
+    "Salitre":          (3, 6),
+    "Centro Historico": (12, 1),
+    "Bosa":             (6, -12)
 }
 
 # Conexiones: (Origen, Destino, Tiempo_minutos, Linea)
@@ -39,6 +43,15 @@ CONEXIONES = [
     ("Universidad", "Calle 26", 5, "Linea C"),
     ("Terminal", "Portal Sur", 8, "Linea C"),
     # --- KRISTINA: Nuevas conexiones ---
+    ("Aeropuerto", "Salitre", 11, "Linea D"),
+    ("Salitre", "Calle 26", 6, "Linea D"),
+    ("Estacion Central", "Centro Historico", 4, "Linea D"),
+    ("Portal Sur", "Bosa", 5, "Linea D"),
+
+("Aeropuerto", "Salitre", 11, "Linea D"),
+    ("Salitre", "Calle 26", 6, "Linea D"),
+    ("Estacion Central", "Centro Historico", 4, "Linea D"),
+    ("Portal Sur", "Bosa", 5, "Linea D"),
 ]
 
 
